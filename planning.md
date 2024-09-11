@@ -12,7 +12,7 @@
 
 ##### PPMc
 - Parâmetro do tamanho de níveis de memória probabilística;
-- Implementar o arimético provavelmente com concatenação de inteiros para formar as casas decimais;
+- Implementar o aritmético provavelmente com concatenação de inteiros para formar as casas decimais;
 
 ##### LZW
 - Flag para manter estático ou reiniciar o dicionário;
