@@ -1,27 +1,16 @@
 #include "LZW.h"
 
-LZW::LZW()
+LZW::LZW(bool benchmarking, int capacity, int benchmarkBufferSize, bool restartDict) : benchmarking(benchmarking), maxMapCapacity(capacity), benchmarkBufferMaxSize(benchmarkBufferSize), restartDictOnOverflow(restartDict)
 {
-
+	if (benchmarking)
+		this->overallMeanBenchmarkFile = std::ofstream("overall_mean_benchmark.txt");
+		this->lastBytesMeanBenchmarkFile = std::ofstream("last_bytes_mean_benchmark.txt");
+		if (!this->overallMeanBenchmarkFile.is_open() || !this->lastBytesMeanBenchmarkFile.is_open()) {
+			throw std::runtime_error("Could not open benchmark report files");
+		}
 }
 
-LZW::~LZW()
-{
-
-}
-
-bool LZW::dumpBytesWritten() {
-	std::ofstream benchmarkFile("benchmark.txt");
-	int subSampleRate = 10, i = 0;
-	while (!bytesWritten.empty()) {
-		double sample = bytesWritten.front();
-		bytesWritten.pop();
-		if (i++ % subSampleRate == 0)
-			benchmarkFile << std::fixed << std::setprecision(3) << sample << std::endl;
-	}
-	benchmarkFile.close();
-	return true;
-}
+LZW::~LZW() {}
 
 bool LZW::initializeMaps() {
 	compressionMap.clear();
@@ -35,42 +24,75 @@ bool LZW::initializeMaps() {
 	return true;
 }
 
-bool LZW::encode(uint8_t symbol, std::string& currentString) {
-	std::string newString = currentString + (char) symbol;
-	this->encodedBytes++;
-	if (compressionMap.find(newString) != compressionMap.end()) {
-		currentString = newString;
-	} else {
-		target.write(reinterpret_cast<const char*>(&compressionMap[currentString]), sizeof(lzw_code_t));
-		currentBytesWritten += sizeof(lzw_code_t);
-		// if (this->nextCompCode > this->maxMapCapacity) {
-		// 	// Reiniciando dicionários
-		// 	this->initializeMaps();
-		// 	newString = (char) symbol;
-		// }
-		compressionMap[newString] = this->nextCompCode++; // Adicionando string com o último símbolo lido
-		currentString = symbol; // Reiniciando string atual
+bool LZW::handleBenchmarkData(long int bytesWritten, long int encodedBytes) {
+	if (this->benchmarking) {
+		// Salvando o comprimento médio atual
+		this->overallMeanBenchmarkFile << std::fixed << std::setprecision(3) << ((double) bytesWritten * 8) / (double) encodedBytes << std::endl;
+
+		// Colocando o novo par de dados no buffer do benchmark
+		this->benchmarkBuffer.push(std::make_pair(bytesWritten, encodedBytes));
+
+		// Se já tiver dados suficientes para o grupo de m bytes codificados
+		if (benchmarkBuffer.size() == benchmarkBufferMaxSize) {
+			std::queue<std::pair<int, int>> copy = benchmarkBuffer;
+			double totalBitsWritten = 0, totalOriginalBytesEncoded = 0;
+
+			// Somando os valores de bits escritos e bytes originais codificados
+			while (!copy.empty()) {
+				std::pair<int, int> pair = copy.front();
+				totalBitsWritten += pair.first;
+				totalOriginalBytesEncoded += pair.second;
+				copy.pop();
+			}
+
+			// Salvando o comprimento médio associado aos últimos bytes originais codificados
+			this->lastBytesMeanBenchmarkFile << std::fixed << std::setprecision(3) << double(totalBitsWritten) / double(totalOriginalBytesEncoded) << std::endl;
+			benchmarkBuffer.pop();
+		}
+		return true;
 	}
-	// std::cout << currentBytesWritten*8 << " / " << encodedBytes << " = " << currentBytesWritten*8 / encodedBytes << std::endl;
-	bytesWritten.push(((double) currentBytesWritten * 8) / (double) encodedBytes);
+	return false;
+}
+
+bool LZW::encode(uint8_t symbol, std::string& currentSequence) {
+	std::string newSequence = currentSequence + (char) symbol;
+	this->encodedBytes++;
+	if (compressionMap.find(newSequence) != compressionMap.end()) {
+		currentSequence = newSequence;
+	} else {
+		target.write(reinterpret_cast<const char*>(&compressionMap[currentSequence]), sizeof(lzw_code_t));
+		currentBytesWritten += sizeof(lzw_code_t);
+
+		// Atualizando o dicionário (caso seja possível)
+		if (this->compressionMap.size() <= this->maxMapCapacity) {
+			this->compressionMap[newSequence] = this->nextCompCode++; // Adicionando string com o último símbolo lido
+		} else {
+			// Reiniciando o dicionário caso essa seja a estratégia escolhida para overflow
+			if (this->restartDictOnOverflow) {
+				this->initializeMaps();
+			}
+		}
+		currentSequence = symbol; // Reiniciando string atual
+	}
+	this->handleBenchmarkData(currentBytesWritten, encodedBytes);
 	return true;
 }
 
 bool LZW::compress(std::string inputPath, std::string targetPath) {
-	std::cout << "Compressing: " << inputPath << "..." << std::endl;
-	std::cout << "-> Encoded symbol size: " << sizeof(lzw_code_t)*8 << " bits" << std::endl;
 	this->input = std::ifstream(inputPath);
 	this->target = std::ofstream(targetPath, std::ios::binary);
 	this->initializeMaps();
 
-    std::string currentString;
+    std::string currentSequence;
     while (!input.eof()) {
 		uint8_t byte = input.get();
-        this->encode(byte, currentString);
+        this->encode(byte, currentSequence);
     }
 
-    if (!currentString.empty()) {
-		target.write(reinterpret_cast<const char*>(&compressionMap[currentString]), sizeof(lzw_code_t));
+	std::cout << "Max cap: " << this->maxMapCapacity << std::endl;
+
+    if (!currentSequence.empty()) {
+		target.write(reinterpret_cast<const char*>(&compressionMap[currentSequence]), sizeof(lzw_code_t));
     }
 
 	this->input.close();
@@ -88,20 +110,21 @@ bool LZW::decode(lzw_code_t encodedSymbol, std::string& previousString) {
 
 	if (decompressionMap.find(encodedSymbol) != decompressionMap.end()) {
 		currentString = decompressionMap[encodedSymbol];
-	} else if (encodedSymbol == this->nextDecCode) {
-		currentString = previousString + previousString[0];
 	} else {
-		throw std::runtime_error("Decompression error: Invalid code encountered.");
+		// Caso especial
+		currentString = previousString + previousString[0];
 	}
 
 	target << currentString;
 
-	// if (this->nextDecCode > this->maxMapCapacity) {
-	// 	this->initializeMaps();
-	// } else {
+	if (this->decompressionMap.size() <= this->maxMapCapacity) {
 		decompressionMap[this->nextDecCode++] = previousString + currentString[0];
-		previousString = currentString;
-	// }
+	} else {
+		if (restartDictOnOverflow) {
+			this->initializeMaps();
+		}
+	}
+	previousString = currentString;
 
 	return true;
 }

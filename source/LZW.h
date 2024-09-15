@@ -11,27 +11,32 @@ class LZW {
     private:
         std::unordered_map<std::string, lzw_code_t> compressionMap;
         std::unordered_map<lzw_code_t, std::string> decompressionMap;
-        lzw_code_t nextCompCode, nextDecCode;
-        
-        bool restartDictOnOverflow = true;
-        // int maxMapCapacity = pow(2, sizeof(lzw_code_t)*8);
-        int maxMapCapacity = 0x1000;
-
-        long int currentBytesWritten = 0, encodedBytes = 0;
-        std::queue<double> bytesWritten;
+        std::queue<std::pair<int, int>> benchmarkBuffer;
 
         std::ifstream input;
 	    std::ofstream target;
+        std::ofstream overallMeanBenchmarkFile;
+        std::ofstream lastBytesMeanBenchmarkFile;
+        
+        lzw_code_t nextCompCode;
+        lzw_code_t nextDecCode;
+        bool restartDictOnOverflow = true;
+        long int maxMapCapacity = pow(2, sizeof(lzw_code_t)*8)-1;
+        int benchmarkBufferMaxSize = 1;
+        bool benchmarking = false;
+        long int currentBytesWritten = 0;
+        long int encodedBytes = 0;
 
-        /* Atualiza o dicionario e prefixo para a proxima string do dicionario, de forma segura em relação a memoria */
         bool encode(uint8_t symbol, std::string& currentString);
         bool decode(lzw_code_t symbol, std::string& previousString);
         
-        bool restartDictionary();
+        bool handleBenchmarkData(long int bytesWritten, long int encodedBytes);
+        bool updateCompMap(std::string newString);
+        bool updateDecMap();
         bool initializeMaps();
     
     public:
-        LZW();
+        LZW(bool benchmarking, int capacity, int benchmarkBufferSize, bool restartDict);
         ~LZW();
 
         bool compress(std::string inputPath, std::string targetPath);
@@ -39,11 +44,6 @@ class LZW {
 
         bool loadDictionary(std::string inputPath);
         bool saveDictionary(std::string inputPath);
-        bool dumpBytesWritten();
-
-        bool setDictionaryMaxBytesCapacity(int capacity);
-        int getDictionaryMaxBytesCapacity();
-
 };
 
 #endif
