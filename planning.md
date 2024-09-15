@@ -21,4 +21,3 @@
 ### Sempressão
 - Definir o cabeçalho;
 - Ler o modelo usado a partir do cabeçalho;
-- Flag para medir o tempo de execução;

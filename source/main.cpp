@@ -16,5 +16,8 @@ int main(int argc, char** argv) {
 	lzw.compress(argv[1], "compressed.jvav");
 	lzw.decompress("compressed.jvav", "decompressed.jvav");
 
+	std::cout << "Dumping raw data..." << std::endl;
+	lzw.dumpBytesWritten();
+
 	return 0;
 }
