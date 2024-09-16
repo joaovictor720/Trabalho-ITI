@@ -17,6 +17,7 @@ class LZW {
 	    std::ofstream target;
         std::ofstream overallMeanBenchmarkFile;
         std::ofstream lastBytesMeanBenchmarkFile;
+        std::string modelPath;
         
         lzw_code_t nextCompCode;
         lzw_code_t nextDecCode;
@@ -27,6 +28,9 @@ class LZW {
         long int currentBytesWritten = 0;
         long int encodedBytes = 0;
 
+        bool usingTrainedModel = false;
+        bool onTraining = false;
+
         bool encode(uint8_t symbol, std::string& currentString);
         bool decode(lzw_code_t symbol, std::string& previousString);
         
@@ -36,14 +40,14 @@ class LZW {
         bool initializeMaps();
     
     public:
-        LZW(bool benchmarking, int capacity, int benchmarkBufferSize, bool restartDict);
+        LZW(bool benchmarking, int capacity, int benchmarkBufferSize, bool restartDict, bool trainingMode);
         ~LZW();
 
         bool compress(std::string inputPath, std::string targetPath);
         bool decompress(std::string inputPath, std::string targetPath);
 
-        bool loadDictionary(std::string inputPath);
-        bool saveDictionary(std::string inputPath);
+        bool saveCompressionMap(std::string modelFilename);
+        bool usingModel(std::string modelPath);
 };
 
 #endif

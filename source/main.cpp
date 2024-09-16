@@ -5,7 +5,10 @@ int main(int argc, char** argv) {
 	bool benchmarking = false;
 	bool restartDict = false;
 	int benchmarkBufferSize = 1;
+	bool training = false;
+	std::string trainedModel;
 	long int dictSize = pow(2, sizeof(lzw_code_t)*8)-1;
+
 	if (argc > 0) {
 		for (int i = 0; i < argc; i++) {
 			if (!strcmp(argv[i], "-b")) {
@@ -15,23 +18,34 @@ int main(int argc, char** argv) {
 					benchmarkBufferSize = atoi(argv[i+1]);
 				else
 					throw std::runtime_error("No benchmark buffer size provided.");
-			} else if (!strcmp(argv[i], "--dictSize")) {
+			} else if (!strcmp(argv[i], "-d")) {
 				if (i+1 < argc)
 					dictSize = std::min((long) atoi(argv[i+1]), dictSize);
 				else
 					throw std::runtime_error("No dictionary size provided.");
 			} else if (!strcmp(argv[i], "-r")) {
 				restartDict = true;
+			} else if (!strcmp(argv[i], "--train")) {
+				training = true;
+			} else if (!strcmp(argv[i], "--use")) {
+				if (i+1 < argc)
+					trainedModel = argv[i+1];
+				else
+					throw std::runtime_error("No model path provided.");
 			}
 		}
 	}
-	LZW lzw = LZW(benchmarking, dictSize, benchmarkBufferSize, restartDict);
+	LZW lzw = LZW(benchmarking, dictSize, benchmarkBufferSize, restartDict, training);
+
+	if (trainedModel.size())
+		lzw.usingModel(trainedModel);
 
 	std::cout << "Compressing: " << argv[1] << "..." << std::endl;
-	std::cout << "-> Encoded symbol size: " << sizeof(lzw_code_t)*8 << " bits" << std::endl;
+	std::cout << "Encoded symbol size: " << sizeof(lzw_code_t)*8 << " bits" << std::endl;
 	lzw.compress(argv[1], "compressed.jvav");
 
-	lzw.decompress("compressed.jvav", "decompressed.jvav");
+	std::cout << "Decompressing: " << "compressed.jvav" << "..." << std::endl;
+	lzw.decompress("compressed.jvav", "decompressed");
 
 	return 0;
 }

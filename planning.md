@@ -8,7 +8,7 @@
 		- Isso precisaria de um formato de arquivo pra especificar os dados de cada tipo de modelo;
 - Flag para medir o tempo de execução;
 - Flag para	registrar e plotar o comprimento médio do arquivo até o byte atual (n-ésimo byte);
-- Flag para	registrar e plotar o comprimento médio do arquivo até o byte atual (n-ésimo byte);
+- Flag para	registrar e plotar o comprimento médio da codificação dos últimos "m" bytes do arquivo até o byte original atual;
 
 ##### PPMc
 - Parâmetro do tamanho de níveis de memória probabilística;
