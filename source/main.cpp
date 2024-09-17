@@ -1,5 +1,5 @@
 #include <bits/stdc++.h>
-#include "LZW.h"
+#include "LZW/LZW.h"
 
 int main(int argc, char** argv) {
 	bool benchmarking = false;

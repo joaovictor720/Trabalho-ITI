@@ -1,1 +1,1 @@
-g++ source/*.cpp -o jvav_compressor -O3
+g++ source/main.cpp source/LZW/*.cpp -o jvav_compressor -O3
