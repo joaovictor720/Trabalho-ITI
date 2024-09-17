@@ -5,7 +5,7 @@ LZW::LZW(bool benchmarking, int capacity, int benchmarkBufferSize, bool restartD
 	this->benchmarking = benchmarking;
 	this->maxMapCapacity = capacity;
 	this->benchmarkBufferMaxSize = benchmarkBufferSize;
-	this->restartDictOnOverflow = restartDict;
+	this->restartMapOnOverflow = restartDict;
 	this->onTraining = trainingMode;
 	if (benchmarking) {
 		this->overallMeanBenchmarkFile = std::ofstream("overall_mean_benchmark.txt");
@@ -20,29 +20,32 @@ LZW::LZW(bool benchmarking, int capacity, int benchmarkBufferSize, bool restartD
 LZW::~LZW() {}
 
 bool LZW::saveCompressionMap(std::string modelFilename) {
-	std::ofstream outputFile(modelFilename, std::ios::binary);
+	std::ofstream outFile(modelFilename, std::ios::binary);
 
-    if (!outputFile.is_open()) {
-        std::cerr << "Error: Could not open file " << modelFilename << " for writing." << std::endl;
+    if (!outFile.is_open()) {
+        std::cerr << "Failed to open file for writing." << std::endl;
         return false;
     }
 
+    // Write the size of the map
+    size_t mapSize = this->compressionMap.size();
+    outFile.write(reinterpret_cast<const char*>(&mapSize), sizeof(mapSize));
+
+    // Write each key-value pair to the file
     for (const auto& pair : this->compressionMap) {
-        const std::string& key = pair.first;
-        lzw_code_t value = pair.second;
+        // Write the size of the vector (key)
+        size_t keySize = pair.first.size();
+        outFile.write(reinterpret_cast<const char*>(&keySize), sizeof(keySize));
 
-        // Write the length of the string key
-        uint32_t keyLength = key.size();
-        outputFile.write(reinterpret_cast<const char*>(&keyLength), sizeof(keyLength));
+        // Write the vector (key) bytes
+        outFile.write(reinterpret_cast<const char*>(pair.first.data()), keySize);
 
-        // Write the string key itself
-        outputFile.write(key.c_str(), keyLength);
-
-        // Write the value (lzw_code_t)
-        outputFile.write(reinterpret_cast<const char*>(&value), sizeof(value));
+        // Write the value
+        outFile.write(reinterpret_cast<const char*>(&pair.second), sizeof(pair.second));
     }
 
-    outputFile.close();
+    outFile.close();
+	std::cout << "Map written to " << modelFilename << " successfully." << std::endl;
 	return true;
 }
 
@@ -54,43 +57,49 @@ bool LZW::usingModel(std::string modelPath) {
 		return true;
 	}
 
-	if (!modelFile.is_open()) {
-		std::cerr << "Error: Could not open file " << this->modelPath << " for reading." << std::endl;
-		return false;
-	}
-	this->usingTrainedModel = true;
+    if (!modelFile.is_open()) {
+        std::cerr << "Failed to open file for reading." << std::endl;
+        return false;
+    }
 
-	while (!modelFile.eof()) {
-		// Read the length of the string key
-		uint32_t keyLength;
-		modelFile.read(reinterpret_cast<char*>(&keyLength), sizeof(keyLength));
+    // Read the size of the map
+    size_t mapSize;
+    modelFile.read(reinterpret_cast<char*>(&mapSize), sizeof(mapSize));
 
-		// Read the string key itself
-		std::string key(keyLength, '\0');
-		modelFile.read(&key[0], keyLength);
+    // Read each key-value pair from the file
+    for (size_t i = 0; i < mapSize; ++i) {
+        // Read the size of the vector (key)
+        size_t keySize;
+        modelFile.read(reinterpret_cast<char*>(&keySize), sizeof(keySize));
 
-		// Read the value (lzw_code_t)
-		lzw_code_t value;
-		modelFile.read(reinterpret_cast<char*>(&value), sizeof(value));
+        // Read the vector (key) bytes
+        std::vector<uint8_t> key(keySize);
+        modelFile.read(reinterpret_cast<char*>(key.data()), keySize);
 
-		// Insert into the dictionary
-		this->compressionMap[key] = value;
-		this->decompressionMap[value] = key;
-		std::cout << key << " -> " << value << std::endl;
-	}
+        // Read the value
+        lzw_code_t value;
+        modelFile.read(reinterpret_cast<char*>(&value), sizeof(value));
 
-	modelFile.close();
+        // Insert the pair into the map
+        this->compressionMap[key] = value;
+        this->decompressionMap[value] = key;
+    }
+
+    modelFile.close();
+    std::cout << "Map read from " << modelPath << " successfully." << std::endl;
+	return true;
 }
 
 bool LZW::initializeMaps() {
+	// Se não estiver usando um modelo já pronto, aí sim mexer nos dicionários
 	if (!this->usingTrainedModel) {
-		compressionMap.clear();
-		for (nextCompCode = 0; nextCompCode < 0x100; nextCompCode++) {
-			compressionMap[std::string(1, (char) nextCompCode)] = nextCompCode;
+		this->compressionMap.clear();
+		for (this->nextCompCode = 0; this->nextCompCode < 0x100; this->nextCompCode++) {
+			this->compressionMap[{static_cast<uint8_t>(this->nextCompCode)}] = this->nextCompCode;
 		}
-		decompressionMap.clear();
-		for (nextDecCode = 0; nextDecCode < 0x100; nextDecCode++) {
-			decompressionMap[nextDecCode] = std::string(1, (char) nextDecCode);
+		this->decompressionMap.clear();
+		for (this->nextDecCode = 0; this->nextDecCode < 0x100; this->nextDecCode++) {
+			this->decompressionMap[this->nextDecCode] = {static_cast<uint8_t>(this->nextDecCode)};
 		}
 	}
 	return true;
@@ -126,8 +135,9 @@ bool LZW::handleBenchmarkData(long int bytesWritten, long int encodedBytes) {
 	return false;
 }
 
-bool LZW::encode(uint8_t symbol, std::string& currentSequence) {
-	std::string newSequence = currentSequence + (char) symbol;
+bool LZW::encode(uint8_t symbol, std::vector<uint8_t>& currentSequence) {
+	std::vector<uint8_t> newSequence = currentSequence;
+	newSequence.push_back(symbol);
 	this->encodedBytes++;
 	if (compressionMap.find(newSequence) != compressionMap.end()) {
 		currentSequence = newSequence;
@@ -140,30 +150,37 @@ bool LZW::encode(uint8_t symbol, std::string& currentSequence) {
 		if (this->compressionMap.size() <= this->maxMapCapacity) {
 			this->compressionMap[newSequence] = this->nextCompCode++; // Adicionando string com o último símbolo lido
 		} else {
-			// Reiniciando o dicionário caso essa seja a estratégia escolhida para overflow
 			if (this->onTraining) {
 				this->saveCompressionMap("lzw_model.txt");
 				return true;
 			}
-			if (this->restartDictOnOverflow) {
+			// Reiniciando o dicionário caso essa seja a estratégia escolhida para overflow
+			if (this->restartMapOnOverflow) {
 				this->initializeMaps();
 			}
 		}
-		currentSequence = symbol; // Reiniciando string atual
+		currentSequence.clear();
+		currentSequence.push_back(symbol); // Reiniciando a sequência atual
 	}
 	this->handleBenchmarkData(currentBytesWritten, encodedBytes);
 	return true;
 }
 
 bool LZW::compress(std::string inputPath, std::string targetPath) {
-	this->input = std::ifstream(inputPath);
+	this->input = std::ifstream(inputPath, std::ios::binary);
 	this->target = std::ofstream(targetPath, std::ios::binary);
+	BitWriter writer(targetPath);
 	this->initializeMaps();
 
-    std::string currentSequence;
-    while (!input.eof()) {
-		uint8_t byte = input.get();
-        this->encode(byte, currentSequence);
+    std::vector<uint8_t> currentSequence;
+
+	char byte;
+    while (input.get(byte)) {
+		// uint8_t byte = input.get();
+		// input.read(reinterpret_cast<char*>(&byte), sizeof(byte));
+		uint8_t symbol = static_cast<uint8_t>(byte);
+		// std::cout << std::hex << (unsigned int) symbol << std::endl;
+        this->encode(symbol, currentSequence);
     }
 
     if (!currentSequence.empty()) {
@@ -176,30 +193,38 @@ bool LZW::compress(std::string inputPath, std::string targetPath) {
 	return true;
 }
 
-bool LZW::decode(lzw_code_t encodedSymbol, std::string& previousString) {
-	std::string currentString;
-	if (encodedSymbol == 0xff) {
-		// Não decodificar o EOF
-		return true;
-	}
+bool LZW::decode(lzw_code_t encodedSymbol, std::vector<uint8_t>& previousSequence) {
+	std::vector<uint8_t> currentSequence;
+	// if (encodedSymbol == 0xff) {
+	// 	// Não decodificar o EOF
+	// 	return true;
+	// }
 
 	if (decompressionMap.find(encodedSymbol) != decompressionMap.end()) {
-		currentString = decompressionMap[encodedSymbol];
+		currentSequence = this->decompressionMap[encodedSymbol];
 	} else {
-		// Caso especial
-		currentString = previousString + previousString[0];
+		// Caso especial em que a sequência do símbolo ainda não está totalmente formada
+		std::vector<uint8_t> temp = previousSequence;
+		temp.push_back(previousSequence[0]);
+		currentSequence = temp;
+		// previousSequence.push_back(previousSequence[0]);
+		// decompressionMap[this->nextDecCode++] = previousSequence;
 	}
 
-	target << currentString;
+	this->target.write(reinterpret_cast<const char*>(currentSequence.data()), currentSequence.size());
 
 	if (this->decompressionMap.size() <= this->maxMapCapacity) {
-		decompressionMap[this->nextDecCode++] = previousString + currentString[0];
+		std::vector<uint8_t> temp = previousSequence;
+		temp.push_back(currentSequence[0]);
+		this->decompressionMap[this->nextDecCode++] = temp;
+		// previousSequence.push_back(currentSequence[0]);
+		// decompressionMap[this->nextDecCode++] = previousSequence;
 	} else {
-		if (restartDictOnOverflow) {
+		if (this->restartMapOnOverflow) {
 			this->initializeMaps();
 		}
 	}
-	previousString = currentString;
+	previousSequence = currentSequence;
 
 	return true;
 }
@@ -209,19 +234,25 @@ bool LZW::decompress(std::string inputPath, std::string targetPath) {
 		return false;
 	}
 
-	input = std::ifstream(inputPath, std::ios::binary);
-	target = std::ofstream(targetPath);
+	this->input = std::ifstream(inputPath, std::ios::binary);
+	this->target = std::ofstream(targetPath, std::ios::binary);
+	if (!this->input.is_open() || !this->target.is_open()) {
+		std::cerr << "Could not open files for decompression." << std::endl;
+		return false;
+	}
+
 	this->initializeMaps();
-    this->nextDecCode = decompressionMap.size();
+    // this->nextDecCode = this->decompressionMap.size();
 
 	lzw_code_t code;
-	input.read(reinterpret_cast<char*>(&code), sizeof(lzw_code_t));
-    std::string previousString = decompressionMap[code];
-	target << previousString;
+	this->input.read(reinterpret_cast<char*>(&code), sizeof(lzw_code_t));
+    std::vector<uint8_t> previousSequence = this->decompressionMap[code];
+
+	this->target.write(reinterpret_cast<const char*>(previousSequence.data()), previousSequence.size());
 
 	while (!input.eof()) {
-		input.read(reinterpret_cast<char*>(&code), sizeof(lzw_code_t));
-		this->decode(code, previousString);
+		this->input.read(reinterpret_cast<char*>(&code), sizeof(lzw_code_t));
+		this->decode(code, previousSequence);
     }
 
 	this->input.close();
