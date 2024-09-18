@@ -6,22 +6,25 @@
 #include <fstream>
 #include <vector>
 #include <cstdint>
+typedef uint32_t lzw_code_t;
 
 class BitWriter {
 private:
-    std::ofstream outputFile;
-    uint64_t bitBuffer; // Accumulates bits
-    int bitCount;       // Tracks number of bits in the buffer
-    
+    std::vector<bool> bitBuffer;
+    size_t currentBitPosition = 0;
+
+    // Write individual bits from the code to the buffer
+    void writeBits(lzw_code_t code, int bitWidth);
+
+    // Helper to flush the bits in the buffer to a file
+    void flushToFile(std::ofstream& output);
+
 public:
-    BitWriter(const std::string &filename);
-    ~BitWriter();
+    // Function to add a code to the bit buffer with a given bit width
+    void addCode(lzw_code_t code, int bitWidth);
 
-    // Writes code with the current bit width to the buffer
-    void writeCode(uint16_t code, int bitWidth);
-
-    // Flushes any remaining bits (padded to full bytes)
-    void flush();
+    // Function to write the buffer to a file
+    void writeToFile(const std::string& filename);
 };
 
 

@@ -6,22 +6,25 @@
 #include <fstream>
 #include <vector>
 #include <cstdint>
+#include "BitWriter.h"
 
 class BitReader {
 private:
-    std::ifstream inputFile;
-    uint64_t bitBuffer; // Stores bits from the file
-    int bitCount;       // Tracks the number of bits currently in the buffer
-    
+    std::vector<bool> bitBuffer;
+    size_t currentBitPosition = 0;
+
+    // Helper to read bytes from a file and fill the bit buffer
+    void loadFromFile(const std::string& filename);
+
+    // Extract a code of the specified bit width from the buffer
+    lzw_code_t readBits(int bitWidth);
+
 public:
-    BitReader(const std::string &filename);
-    ~BitReader();
+    // Load the bits from the file into the buffer
+    void readFromFile(const std::string& filename);
 
-    // Reads 'bitWidth' bits from the input stream and returns them as a code
-    uint16_t readCode(int bitWidth);
-
-    // Closes the input file
-    void close();
+    // Function to retrieve the next code of the given bit width
+    lzw_code_t getNextCode(int bitWidth);
 };
 
 #endif

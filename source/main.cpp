@@ -37,8 +37,8 @@ int main(int argc, char** argv) {
 	}
 
 	// std::vector<uint8_t> test;
-	// for (int i = 0; i < 256; i++) {
-	// 	test.push_back((uint8_t) i);
+	// for (int i = 0; i < 4; i++) {
+	// 	test.push_back((uint8_t) 0xff);
 	// }
 	// std::ofstream file("file");
 	// file.write(reinterpret_cast<const char*>(test.data()), test.size());
@@ -52,8 +52,17 @@ int main(int argc, char** argv) {
 	std::cout << "Compressing: " << argv[1] << "..." << std::endl;
 	lzw.compress(argv[1], "compressed.jvav");
 
-	std::cout << "Decompressing: " << "compressed.jvav" << "..." << std::endl;
+	std::cout << "\nDecompressing: " << "compressed.jvav" << "..." << std::endl;
 	lzw.decompress("compressed.jvav", "decompressed");
+
+	// ler arquivo descomprimido
+	// std::ifstream decomp("decompressed");
+	// char byte;
+	// while (!decomp.eof()) {
+	// 	byte = decomp.get();
+	// 	std::bitset<8> temp = byte;
+	// 	std::cout << temp << " = " << temp.to_ulong() << std::endl;
+	// }
 
 	return 0;
 }
