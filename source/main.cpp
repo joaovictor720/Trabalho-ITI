@@ -1,5 +1,5 @@
 #include <bits/stdc++.h>
-#include "LZW.h"
+#include "LZW/LZW.h"
 
 int main(int argc, char** argv) {
 	bool benchmarking = false;
@@ -35,13 +35,21 @@ int main(int argc, char** argv) {
 			}
 		}
 	}
+
+	// std::vector<uint8_t> test;
+	// for (int i = 0; i < 256; i++) {
+	// 	test.push_back((uint8_t) i);
+	// }
+	// std::ofstream file("file");
+	// file.write(reinterpret_cast<const char*>(test.data()), test.size());
+	// file.close();
+
 	LZW lzw = LZW(benchmarking, dictSize, benchmarkBufferSize, restartDict, training);
 
 	if (trainedModel.size())
 		lzw.usingModel(trainedModel);
 
 	std::cout << "Compressing: " << argv[1] << "..." << std::endl;
-	std::cout << "Encoded symbol size: " << sizeof(lzw_code_t)*8 << " bits" << std::endl;
 	lzw.compress(argv[1], "compressed.jvav");
 
 	std::cout << "Decompressing: " << "compressed.jvav" << "..." << std::endl;

@@ -4,13 +4,14 @@
 #pragma once
 
 #include <bits/stdc++.h>
+#include "BitWriter.h"
 
 typedef uint16_t lzw_code_t;
 
 class LZW {
     private:
-        std::unordered_map<std::string, lzw_code_t> compressionMap;
-        std::unordered_map<lzw_code_t, std::string> decompressionMap;
+        std::map<std::vector<uint8_t>, lzw_code_t> compressionMap;
+        std::map<lzw_code_t, std::vector<uint8_t>> decompressionMap;
         std::queue<std::pair<int, int>> benchmarkBuffer;
 
         std::ifstream input;
@@ -21,7 +22,7 @@ class LZW {
         
         lzw_code_t nextCompCode;
         lzw_code_t nextDecCode;
-        bool restartDictOnOverflow = true;
+        bool restartMapOnOverflow = true;
         long int maxMapCapacity = pow(2, sizeof(lzw_code_t)*8)-1;
         int benchmarkBufferMaxSize = 1;
         bool benchmarking = false;
@@ -31,12 +32,10 @@ class LZW {
         bool usingTrainedModel = false;
         bool onTraining = false;
 
-        bool encode(uint8_t symbol, std::string& currentString);
-        bool decode(lzw_code_t symbol, std::string& previousString);
+        bool encode(uint8_t symbol, std::vector<uint8_t>& currentString);
+        bool decode(lzw_code_t symbol, std::vector<uint8_t>& previousString);
         
         bool handleBenchmarkData(long int bytesWritten, long int encodedBytes);
-        bool updateCompMap(std::string newString);
-        bool updateDecMap();
         bool initializeMaps();
     
     public:
