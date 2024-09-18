@@ -1,6 +1,7 @@
 #include "PPMc.h"
 
-PPMc::PPMc(int maxContext) : maxContext(maxContext) 
+PPMc::PPMc(int maxContext, uint64_t maxBytes) 
+: maxContext(maxContext), maxBytes(maxBytes), bytesAddedToModel(0)
 {
     root = new TrieNode();
     initializeEquiprobableSymbols();
@@ -94,9 +95,8 @@ void PPMc::encodeAndUpdateContexts(uint16_t symbol, ArithmeticEncoder& encoder, 
         }),
     equiprobableSymbols.end());
 
-    //std::cout << "entrei updatetable" << std::endl;
     updateAllTables(symbol, -1, context);
-    //std::cout << "sai updadatetable" << std::endl;
+
 
 
     return;
@@ -139,7 +139,7 @@ void PPMc::compressFile(const std::string& inputFile, const std::string& outputF
     // Lê o arquivo byte por byte e codifica
     char byte;
     while (input.get(byte)) {
-        std::cout << "byte lido" << byte <<std::endl;
+        //std::cout << "byte lido" << byte <<std::endl;
         uint8_t symbol = static_cast<uint8_t>(byte);
         encodeAndUpdateContexts(symbol, encoder, context);
 
@@ -352,6 +352,7 @@ int PPMc::findMaxExistentContext(const std::vector<uint16_t>& context) {
     // Percorremos os contextos do mais profundo até o mais raso
     for (int depth = currentContextSize; depth >= 0; --depth) {
         currentNode = root;
+        bool inexistentContext = false;
 
         // Define o subcontexto de acordo com o tamanho atual
         std::vector<uint16_t> subContext(context.end() - depth, context.end());
@@ -361,8 +362,23 @@ int PPMc::findMaxExistentContext(const std::vector<uint16_t>& context) {
         // Percorre o subcontexto atual inteiro, descendo na árvore
         for (uint16_t ctxSymbol : subContext) {
             TrieNode* nextNode = currentNode->getChild(ctxSymbol);
+
+            //Se o eu não consigo navegar pelo contexto inteiro, ele não existe
+            if (nextNode == nullptr)
+            {
+                inexistentContext = true;
+                break;
+            }
+            
             currentNode = nextNode; // Avança para o próximo nível
         }
+
+        //
+        if (inexistentContext)
+        {
+            continue;;
+        }
+        
         
         // Agora estamos no nó do contexto apropriado. Vamos verificar se o contexto já existe.
         if (!(currentNode->getChildren().empty())) {
@@ -376,6 +392,10 @@ int PPMc::findMaxExistentContext(const std::vector<uint16_t>& context) {
 }
 
 void PPMc::updateAllTables(uint16_t symbol, int levelKOfCodifiedSymbol, const std::vector<uint16_t>& context) {
+    if (maxBytes != -1 && bytesAddedToModel >= maxBytes) {
+        // Se o limite de bytes foi atingido, não adiciona mais
+        return;
+    }
     TrieNode* currentNode = root;
 
     // O número de contextos presentes é dado pelo tamanho do vetor de contextos
@@ -418,5 +438,6 @@ void PPMc::updateAllTables(uint16_t symbol, int levelKOfCodifiedSymbol, const st
         //std::cout <<"Contador: " << currentNode->getChild(symbol)->getCount() << std::endl;
     }
 
+    bytesAddedToModel++;
     return;
 }
