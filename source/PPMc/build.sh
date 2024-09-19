@@ -1,0 +1,1 @@
+g++ -O3 -march=native -funroll-loops -flto -o jvav_ppmc source/*.cpp
