@@ -24,8 +24,20 @@ void LZW2Reader::increment_width() {
 
 lzw_code_t LZW2Reader::read() {
 	lzw_code_t code;
-	end_of_file_signal = !input.read(reinterpret_cast<char*>(&code), sizeof(code));
-	// end_of_file_signal = input.eof();
+	// end_of_file_signal = !input.read(reinterpret_cast<char*>(&code), sizeof(code));
+
+	//std::cout << "Reading " << code_width << " bits" << std::endl;
+	
+	while (buf_size < code_width) {
+		char byte;
+		end_of_file_signal = !input.get(byte);
+		buf = (buf << BYTE_SIZE) | (uint8_t) byte;
+		buf_size += BYTE_SIZE;
+	}
+	uint64_t dynamic_mask = ((1 << code_width) - 1);
+	code = (buf >> (buf_size - code_width)) & dynamic_mask;
+	buf_size -= code_width;
+
 	return code;
 }
 

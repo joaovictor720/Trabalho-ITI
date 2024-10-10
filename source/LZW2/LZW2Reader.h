@@ -22,6 +22,9 @@ public:
 private:
     std::ifstream input;
     int code_width = 8; // Começa com 8 para comportar todos os valores de um byte
+    int buf_size = 0;
+    uint64_t buf = 0;
+    
     bool end_of_file_signal = false;
 };
 

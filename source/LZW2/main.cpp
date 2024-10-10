@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
 	}
 	
 	LZW2 lzw2;
-	lzw2.set_max_phrases(max_map_phrases);
+	lzw2.set_max_sequences(max_map_phrases);
 	lzw2.set_restart_map_on_overflow(restart_map_on_overflow);
 
 	if (compress) {
