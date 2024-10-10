@@ -39,21 +39,42 @@ void LZW2::compress(std::string& input_filename, std::string& output_filename) {
 	char byte;
     while (input.get(byte)) {
 		uint8_t symbol = static_cast<uint8_t>(byte);
+		std::cout << "Read original " << byte << std::endl;
 		std::vector<uint8_t> new_seq = current_seq;
 		new_seq.push_back(symbol); // Obtendo a sequência que contém o novo byte lido
 
 		if (compression_map.find(new_seq) != compression_map.end()) {
+			std::cout << "Exists " << compression_map[new_seq] << "<>";
+			for (auto& c : new_seq) {
+				std::cout << c << "-";
+			}
+			std::cout << std::endl;
 			// Se a nova sequência ainda estiver no dicionário, só continuar lendo a partir dela
 			current_seq = new_seq;
 		} else {
+			std::cout << "Doesn't exist ";
+			for (auto& c : new_seq) {
+				std::cout << c << "-";
+			}
+			std::cout << std::endl;
 			// Se a nova sequência não estiver
+			std::cout << "Writing " << compression_map[current_seq] << "<>";
+			for (auto& c : current_seq) {
+				std::cout << c << "-";
+			}
+			std::cout << std::endl;
 			writer.write(compression_map[current_seq]); // Mandando para saída o código da última sequência que estava no dicionário
 
 			// Atualizando o dicionário (se possível)
 			if (compression_map.size()+1 < max_phrases) {
+				std::cout << "Adding " << compression_map.size() << "<>";
+				for (auto& c : new_seq) {
+					std::cout << c << "-";
+				}
+				std::cout << std::endl << std::endl;
 				compression_map[new_seq] = compression_map.size();
 			} else {
-				// Reiniciando o dicionário se a estratégia para overflow for essa
+				// Tratando o overflow do dicionário
 				if (restart_map_on_overflow) {
 					initialize_maps();
 				}
@@ -63,7 +84,12 @@ void LZW2::compress(std::string& input_filename, std::string& output_filename) {
 	}
 
 	// Se o EOF for lido a última sequência lida ainda estava no dicionário, fazer flush dela na saída
-	if (!current_seq.size()) {
+	if (current_seq.size()) {
+		std::cout << "Writing (flush) " << compression_map[current_seq] << "<>";
+		for (auto& c : current_seq) {
+			std::cout << c << "-";
+		}
+		std::cout << std::endl;
 		writer.write(compression_map[current_seq]);
 	}
 
@@ -81,9 +107,25 @@ void LZW2::decompress(std::string& input_filename, std::string& output_filename)
 	// Lendo e decodificando o primeiro código
 	lzw_code_t code = reader.read();
 	std::vector<uint8_t> previous_seq = decompression_map[code];
+
+	std::cout << "Read back " << code << "<>";
+	for (auto& c : previous_seq) {
+		std::cout << c << "-";
+	}
+	std::cout << std::endl;
+
+	std::cout << "Writing ";
+	for (auto& c : previous_seq) {
+		std::cout << c << "-";
+	}
+	std::cout << std::endl;
 	output.write(reinterpret_cast<const char*>(previous_seq.data()), previous_seq.size());
 
-	while (!reader.eof()) {
+	while (true) {
+		code = reader.read();
+		if (reader.eof()) {
+			break;
+		}
 		std::vector<uint8_t> current_seq; // Sequência associada ao código lido agora
 		
 		// Se o código existe no dicionário, só pegar a sequência associada a ele
@@ -94,8 +136,19 @@ void LZW2::decompress(std::string& input_filename, std::string& output_filename)
 			current_seq = previous_seq;
 			current_seq.push_back(previous_seq[0]);
 		}
+
+		std::cout << "Read back " << code << "<>";
+		for (auto& c : current_seq) {
+			std::cout << c << "-";
+		}
+		std::cout << std::endl;
 		
 		// Escrevendo na saída a sequência associada ao código lido
+		std::cout << "Writing ";
+		for (auto& c : current_seq) {
+			std::cout << c << "-";
+		}
+		std::cout << std::endl;
 		output.write(reinterpret_cast<const char*>(current_seq.data()), current_seq.size());
 		
 		// Atualizando o dicionário (se possível)
@@ -103,7 +156,12 @@ void LZW2::decompress(std::string& input_filename, std::string& output_filename)
 			// A nova sequência é a anterior + o símbolo que quebrou a anterior (primeiro da atual)
 			std::vector<uint8_t> temp = previous_seq;
 			temp.push_back(current_seq[0]);
-			decompression_map[code] = temp;
+			std::cout << "Adding " << decompression_map.size() << "<>";
+			for (auto& c : temp) {
+				std::cout << c << "-";
+			}
+			std::cout << std::endl << std::endl;
+			decompression_map[decompression_map.size()] = temp;
 		}
 		previous_seq = current_seq; // Atualizando a sequência anterior
 	}

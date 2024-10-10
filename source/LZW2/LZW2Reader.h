@@ -5,6 +5,7 @@
 
 #include <fstream>
 #include <string>
+#include "LZWType.h"
 
 class LZW2Reader
 {
@@ -13,14 +14,15 @@ public:
     ~LZW2Reader();
 
     lzw_code_t read();
+    long get_max_code_value();
+    void increment_width();
     bool eof(); // Sinalizar aqui quando terminar de ler o arquivo
     void close();
 
 private:
     std::ifstream input;
     int code_width = 8; // Começa com 8 para comportar todos os valores de um byte
-
-    long get_max_code_value();
+    bool end_of_file_signal = false;
 };
 
 #endif

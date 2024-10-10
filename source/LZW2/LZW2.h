@@ -12,8 +12,6 @@
 #include "LZW2Writer.h"
 #include "LZW2Reader.h"
 
-typedef uint32_t lzw_code_t;
-
 class LZW2 {
 public:
     LZW2();

@@ -17,3 +17,8 @@ void LZW2Writer::close() {
 long LZW2Writer::get_max_code_value() {
 	return (1 << code_width) - 1;
 }
+
+void LZW2Writer::write(lzw_code_t code) {
+	output.write(reinterpret_cast<const char*>(&code), sizeof(code));
+	// buf_size = code_width;
+}
