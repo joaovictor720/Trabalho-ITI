@@ -81,6 +81,7 @@ void LZW2::compress(std::string& input_filename, std::string& output_filename) {
 			} else {
 				// Tratando o overflow do dicionário
 				if (restart_map_on_overflow) {
+					std::cout << "Reiniciando" << std::endl;
 					initialize_maps();
 				}
 			}
@@ -178,9 +179,15 @@ void LZW2::decompress(std::string& input_filename, std::string& output_filename)
 				reader.increment_width();
 			}
 			decompression_map[decompression_map.size()] = temp;
+		} else {
+			// Tratando o overflow do dicionário
+			if (restart_map_on_overflow) {
+				initialize_maps();
+			}
 		}
 		previous_seq = current_seq; // Atualizando a sequência anterior
 	}
+
 
 	output.flush();
 	output.close();

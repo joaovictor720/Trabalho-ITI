@@ -5,9 +5,9 @@ int main(int argc, char** argv) {
 	bool restart_map_on_overflow = false;
 	bool compress = false;
 	bool decompress = false;
-	long int max_map_phrases = (1 << sizeof(lzw_code_t)*8) - 1;
-	std::string input;
-	std::string output;
+	unsigned long long max_map_phrases = (1 << sizeof(lzw_code_t)*8) - 1;
+	std::string input = "";
+	std::string output = "";
 
 	if (argc > 0) {
 		for (int i = 0; i < argc; i++) {
@@ -31,6 +31,11 @@ int main(int argc, char** argv) {
 				}
 			}
 		}
+	}
+
+	if (input == "" || output == "" || input == output) {
+		std::cerr << "Erro: Arquivo de input e output vazios ou iguais." << std::endl;
+		return 1;
 	}
 	
 	LZW2 lzw2;
