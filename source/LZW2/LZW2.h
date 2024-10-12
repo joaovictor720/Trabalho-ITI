@@ -20,6 +20,8 @@ public:
     // Setters
     void set_restart_map_on_overflow(bool b);
     void set_max_sequences(long int max_sequences);
+    void load_model(std::string& input_model_name);
+    void save_model(std::string& output_model_name);
 
     void compress(std::string& input, std::string& output);
     void decompress(std::string& input, std::string& output);
@@ -31,6 +33,7 @@ private:
     unsigned long long max_sequences = (1 << sizeof(lzw_code_t)*8) - 1; // A princípio pode ser no máximo o que lzw_code_t puder comportar
 
     bool restart_map_on_overflow = true;
+    bool is_using_model = false;
 
     void initialize_maps();
     long get_max_code_value();

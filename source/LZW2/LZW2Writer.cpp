@@ -22,6 +22,10 @@ void LZW2Writer::increment_width() {
 	code_width++;
 }
 
+void LZW2Writer::set_code_width_from_map_size(int size) {
+	code_width = ceil(log2(size));
+}
+
 void LZW2Writer::write(lzw_code_t code) {
 	// output.write(reinterpret_cast<const char*>(&code), sizeof(code));
 	// buf_size = code_width;

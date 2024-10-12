@@ -3,8 +3,6 @@
 
 #pragma once
 
-#include <fstream>
-#include <string>
 #include "LZWType.h"
 
 class LZW2Writer
@@ -16,6 +14,7 @@ public:
     void write(lzw_code_t code);
     long get_max_code_value();
     void increment_width();
+    void set_code_width_from_map_size(int size);
     void flush();
     void close();
 

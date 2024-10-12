@@ -18,6 +18,75 @@ void LZW2::set_max_sequences(long int max_sequences) {
 	this->max_sequences = max_sequences;
 }
 
+void LZW2::load_model(std::string& input_model_name) {
+	std::cout << "Loading model from " << input_model_name << std::endl;
+	std::ifstream model_file(input_model_name, std::ios::binary);
+	is_using_model = true;
+
+	if (compression_map.size() != 0 && decompression_map.size() != 0) {
+		return;
+	}
+
+    if (!model_file.is_open()) {
+        std::cerr << "Failed to open file for reading." << std::endl;
+        return;
+    }
+
+    // Read the size of the map
+    size_t mapSize;
+    model_file.read(reinterpret_cast<char*>(&mapSize), sizeof(mapSize));
+
+    // Read each key-value pair from the file
+    for (size_t i = 0; i < mapSize; ++i) {
+        // Read the size of the vector (key)
+        size_t keySize;
+        model_file.read(reinterpret_cast<char*>(&keySize), sizeof(keySize));
+
+        // Read the vector (key) bytes
+        std::vector<uint8_t> key(keySize);
+        model_file.read(reinterpret_cast<char*>(key.data()), keySize);
+
+        // Read the value
+        lzw_code_t value;
+        model_file.read(reinterpret_cast<char*>(&value), sizeof(value));
+
+        // Insert the pair into the map
+        this->compression_map[key] = value;
+        this->decompression_map[value] = key;
+    }
+
+    model_file.close();
+    std::cout << "Map read from " << input_model_name << " successfully." << std::endl;
+}
+
+void LZW2::save_model(std::string& output_model_name) {
+	std::ofstream model_file(output_model_name, std::ios::binary);
+
+    if (!model_file.is_open()) {
+        std::cerr << "Failed to open file for writing." << std::endl;
+    }
+
+    // Write the size of the map
+    size_t mapSize = this->compression_map.size();
+    model_file.write(reinterpret_cast<const char*>(&mapSize), sizeof(mapSize));
+
+    // Write each key-value pair to the file
+    for (const auto& pair : this->compression_map) {
+        // Write the size of the vector (key)
+        size_t keySize = pair.first.size();
+        model_file.write(reinterpret_cast<const char*>(&keySize), sizeof(keySize));
+
+        // Write the vector (key) bytes
+        model_file.write(reinterpret_cast<const char*>(pair.first.data()), keySize);
+
+        // Write the value
+        model_file.write(reinterpret_cast<const char*>(&pair.second), sizeof(pair.second));
+    }
+
+    model_file.close();
+	std::cout << "Map written to " << output_model_name << " successfully." << std::endl;
+}
+
 void LZW2::initialize_maps() {
 	this->compression_map.clear();
 	this->decompression_map.clear();
@@ -32,7 +101,10 @@ void LZW2::compress(std::string& input_filename, std::string& output_filename) {
 	LZW2Writer writer(output_filename); // Responsável por escrever e contabilizar os bits no buffer
 
 	// Iniciando os dicionários
-	initialize_maps();
+	if (!is_using_model) {
+		initialize_maps();
+	}
+	writer.set_code_width_from_map_size(compression_map.size());
 	
 	// Passando por todos os bytes do arquivo
 	std::vector<uint8_t> current_seq;
@@ -109,7 +181,10 @@ void LZW2::decompress(std::string& input_filename, std::string& output_filename)
 	LZW2Reader reader(input_filename);
 
 	// Inicializando os dicionários
-	initialize_maps();
+	if (!is_using_model) {
+		initialize_maps();
+	}
+	reader.set_code_width_from_map_size(compression_map.size());
 
 	// Lendo e decodificando o primeiro código
 	lzw_code_t code = reader.read();

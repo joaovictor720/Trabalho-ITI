@@ -22,11 +22,12 @@ void LZW2Reader::increment_width() {
 	code_width++;
 }
 
+void LZW2Reader::set_code_width_from_map_size(int size) {
+	code_width = ceil(log2(size));
+}
+
 lzw_code_t LZW2Reader::read() {
 	lzw_code_t code;
-	// end_of_file_signal = !input.read(reinterpret_cast<char*>(&code), sizeof(code));
-
-	//std::cout << "Reading " << code_width << " bits" << std::endl;
 	
 	while (buf_size < code_width) {
 		char byte;

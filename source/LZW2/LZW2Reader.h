@@ -3,8 +3,6 @@
 
 #pragma once
 
-#include <fstream>
-#include <string>
 #include "LZWType.h"
 
 class LZW2Reader
@@ -16,6 +14,7 @@ public:
     lzw_code_t read();
     long get_max_code_value();
     void increment_width();
+    void set_code_width_from_map_size(int size);
     bool eof(); // Sinalizar aqui quando terminar de ler o arquivo
     void close();
 
