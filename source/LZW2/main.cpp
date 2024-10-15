@@ -15,7 +15,7 @@ int main(int argc, char** argv) {
 	bool decompress = false;
 	bool is_using_model = false;
 	bool save_model = false;
-	unsigned long long max_map_phrases = (1 << sizeof(lzw_code_t)*8) - 1;
+	unsigned long long max_map_phrases = LZW_CODE_T_MAX;
 	std::string input = "";
 	std::string output = "";
 	std::string model_file = "";
@@ -40,9 +40,14 @@ int main(int argc, char** argv) {
 			} else if (!strcmp("-sm", argv[i]) && i+1 < argc) {
 				save_model = true;
 				model_file = argv[i+1];
+			} else if (!strcmp("-h", argv[i]) && i+1 < argc) {
+				print_usage(argv[0]);
+				return 0;
 			}
 		}
 	}
+
+	// TODO: flag de reiniciar o dicionário não pode coexistir com a flag de salvar o dicionário
 
 	if (input == "" || output == "" || input == output) {
 		std::cerr << "Erro: Arquivo de input e output vazios ou iguais." << std::endl;
@@ -60,7 +65,7 @@ int main(int argc, char** argv) {
 	}
 
 	// Printando configurações
-	std::cout << "Número de frases no dicionário: " << max_map_phrases << std::endl;
+	std::cout << "Número máximo de frases no dicionário: " << max_map_phrases << std::endl;
 	if (restart_map_on_overflow) {
 		std::cout << "Estratégia de overflow: REINICIAR" << std::endl;
 	} else {

@@ -2,8 +2,12 @@
 
 lzw_max=0
 original_filename=""
+is_using_model=false
+is_saving_model=false
+is_restarting_map=false
+model_name=""
 
-# Passando pelos argumentos
+# Processando os argumentos
 while [[ $# -gt 0 ]]; do
     case "$1" in
 		--test)
@@ -13,6 +17,20 @@ while [[ $# -gt 0 ]]; do
         --lzw-max)
             lzw_max="$2"
             shift 2
+            ;;
+        -sm)
+            is_saving_model=true
+            model_name=$2
+            shift 2
+            ;;
+        -um)
+            is_using_model=true
+            model_name=$2
+            shift 2
+            ;;
+        -r)
+            is_restarting_map=true
+            shift 1
             ;;
         --)
             shift # end of options
@@ -41,7 +59,17 @@ lzw_params="-c $original_filename $compressed_filename"
 if [[ $lzw_max -ne 0 ]]; then
 	lzw_params="$lzw_params -m $lzw_max"
 fi
+if [ $is_using_model = true ]; then
+    lzw_params="$lzw_params -um $model_name"
+fi
+if [ $is_saving_model = true ]; then
+    lzw_params="$lzw_params -sm $model_name"
+fi
+if [ $is_restarting_map = true ]; then
+    lzw_params="$lzw_params -r"
+fi
 
+echo "Parâmetros do LZW: '$lzw_params'\n"
 ./jvav_lzw $lzw_params
 
 original_size=$(wc -c < "$original_filename")

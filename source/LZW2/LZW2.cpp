@@ -19,7 +19,7 @@ void LZW2::set_max_sequences(long int max_sequences) {
 }
 
 void LZW2::load_model(std::string& input_model_name) {
-	std::cout << "Loading model from " << input_model_name << std::endl;
+	std::cout << "Carregando dicionário '" << input_model_name << "'..." << std::endl;
 	std::ifstream model_file(input_model_name, std::ios::binary);
 	is_using_model = true;
 
@@ -28,7 +28,7 @@ void LZW2::load_model(std::string& input_model_name) {
 	}
 
     if (!model_file.is_open()) {
-        std::cerr << "Failed to open file for reading." << std::endl;
+        std::cerr << "Erro ao abrir arquivo do dicionário." << std::endl;
         return;
     }
 
@@ -56,14 +56,16 @@ void LZW2::load_model(std::string& input_model_name) {
     }
 
     model_file.close();
-    std::cout << "Map read from " << input_model_name << " successfully." << std::endl;
+    std::cout << "Dicionário '" << input_model_name << "' carregado com sucesso." << std::endl;
+    std::cout << "Tamanho do dicionário: " << compression_map.size() << std::endl;
 }
 
 void LZW2::save_model(std::string& output_model_name) {
+	std::cout << "Escrevendo dicionário em '" << output_model_name << "'..." << std::endl;
 	std::ofstream model_file(output_model_name, std::ios::binary);
 
     if (!model_file.is_open()) {
-        std::cerr << "Failed to open file for writing." << std::endl;
+        std::cerr << "Erro ao abrir arquivo do dicionário." << std::endl;
     }
 
     // Write the size of the map
@@ -84,7 +86,7 @@ void LZW2::save_model(std::string& output_model_name) {
     }
 
     model_file.close();
-	std::cout << "Map written to " << output_model_name << " successfully." << std::endl;
+	std::cout << "Dicionário salvo em '" << output_model_name << "' com sucesso." << std::endl;
 }
 
 void LZW2::initialize_maps() {
@@ -153,7 +155,6 @@ void LZW2::compress(std::string& input_filename, std::string& output_filename) {
 			} else {
 				// Tratando o overflow do dicionário
 				if (restart_map_on_overflow) {
-					std::cout << "Reiniciando" << std::endl;
 					initialize_maps();
 				}
 			}
@@ -262,7 +263,6 @@ void LZW2::decompress(std::string& input_filename, std::string& output_filename)
 		}
 		previous_seq = current_seq; // Atualizando a sequência anterior
 	}
-
 
 	output.flush();
 	output.close();
