@@ -14,7 +14,8 @@ int main(int argc, char** argv) {
 	bool compress = false;
 	bool decompress = false;
 	bool is_using_model = false;
-	bool save_model = false;
+	bool is_saving_model = false;
+	bool is_benchmarking = false;
 	unsigned long long max_map_phrases = LZW_CODE_T_MAX;
 	std::string input = "";
 	std::string output = "";
@@ -38,16 +39,20 @@ int main(int argc, char** argv) {
 				is_using_model = true;
 				model_file = argv[++i];
 			} else if (!strcmp("-sm", argv[i]) && i+1 < argc) {
-				save_model = true;
+				is_saving_model = true;
 				model_file = argv[i+1];
-			} else if (!strcmp("-h", argv[i]) && i+1 < argc) {
+			} else if (!strcmp("-h", argv[i])) {
 				print_usage(argv[0]);
 				return 0;
+			} else if (!strcmp("-b", argv[i])) {
+				is_benchmarking = true;
 			}
 		}
 	}
 
-	// TODO: flag de reiniciar o dicionário não pode coexistir com a flag de salvar o dicionário
+	if (restart_map_on_overflow && is_saving_model) {
+		std::cerr << "Erro: Não é possível reiniciar e salvar o dicionário ao mesmo tempo." << std::endl;
+	}
 
 	if (input == "" || output == "" || input == output) {
 		std::cerr << "Erro: Arquivo de input e output vazios ou iguais." << std::endl;
@@ -60,6 +65,7 @@ int main(int argc, char** argv) {
 	LZW2 lzw2;
 	lzw2.set_max_sequences(max_map_phrases);
 	lzw2.set_restart_map_on_overflow(restart_map_on_overflow);
+	lzw2.set_benchmarking(is_benchmarking);
 	if (is_using_model) {
 		lzw2.load_model(model_file);
 	}
@@ -80,7 +86,7 @@ int main(int argc, char** argv) {
 	if (compress) {
 		std::cout << "Comprimindo '" << input << "' para '" << output << "'" << std::endl;
 		lzw2.compress(input, output);
-		if (save_model) {
+		if (is_saving_model) {
 			lzw2.save_model(model_file);
 		}
 	} else if (decompress) {

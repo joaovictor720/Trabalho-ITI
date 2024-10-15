@@ -2,7 +2,7 @@
 
 LZW2::LZW2()
 {
-
+	this->benchmark_data_file = std::ofstream("benchmark_data_file");
 }
 
 LZW2::~LZW2()
@@ -16,6 +16,15 @@ void LZW2::set_restart_map_on_overflow(bool b) {
 
 void LZW2::set_max_sequences(long int max_sequences) {
 	this->max_sequences = max_sequences;
+}
+
+void LZW2::set_benchmarking(bool is_benchmarking) {
+	this->is_benchmarking = is_benchmarking;
+	if (is_benchmarking) {
+		std::cout << "Benchmarking ATIVADO. Salvando dados em 'benchmark_data_file'." << std::endl;
+	} else {
+		std::cout << "Benchmarking DESATIVADO." << std::endl;
+	}
 }
 
 void LZW2::load_model(std::string& input_model_name) {
@@ -160,6 +169,9 @@ void LZW2::compress(std::string& input_filename, std::string& output_filename) {
 			}
 			current_seq = {symbol}; // Reiniciando a sequência atual
 		}
+		if (is_benchmarking) {
+			benchmark_data_file << writer.get_bits_written() << std::endl;
+		}
 	}
 
 	// Se o EOF for lido a última sequência lida ainda estava no dicionário, fazer flush dela na saída
@@ -170,9 +182,9 @@ void LZW2::compress(std::string& input_filename, std::string& output_filename) {
 		}
 		//std::cout << std::endl;
 		writer.write(compression_map[current_seq]);
-		writer.flush();
 	}
 
+	writer.flush();
 	input.close();
 	writer.close();
 }

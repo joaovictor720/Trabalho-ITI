@@ -74,7 +74,7 @@ echo "Parâmetros do LZW: '$lzw_params'\n"
 
 original_size=$(wc -c < "$original_filename")
 compressed_size=$(wc -c < "$compressed_filename")
-mean_length=$(echo "scale=2; $compressed_size * 8 / $original_size" | bc)
+mean_length=$(echo "scale=3; $compressed_size * 8 / $original_size" | bc)
 
 echo "Comprimento médio: $mean_length"
-# rm $compressed_filename
+rm $compressed_filename
