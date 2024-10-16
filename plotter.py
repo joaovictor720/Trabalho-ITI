@@ -2,31 +2,43 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-def plot_data(file_path, subsample_factor):
-    # Read the floating point values from the file
+def plot_data(file_path, subsample_factor, graph_id):
     with open(file_path, 'r') as file:
         data = [float(line.strip()) for line in file]
     
-    # Apply subsampling (take every nth point)
+    # Dividindo os data points pelo seu índice, já que os dados vêm como valor absolute bits escritos
+    data = [value / (i + 1) for i, value in enumerate(data)]
+    
+    # Subamostrando
     subsampled_data = data[::subsample_factor]
     
-    # Plot the subsampled data
+    # Gerando os valores do eixo x (índices dos data points)
+    x_values = np.arange(1, len(subsampled_data) + 1)
+    
+    # Plotando os data points originais
     plt.figure(figsize=(10, 5))
-    plt.plot(subsampled_data, marker='o', linestyle='-', markersize=2, label=f"Subsample factor: {subsample_factor}")
-    plt.title(f"Plot of {file_path}")
-    plt.xlabel("Index (Subsampled)")
-    plt.ylabel("Mean length (encoded bits / original byte)")
+    plt.plot(x_values, subsampled_data, marker='o', linestyle='-', markersize=2, label=f"Fator de subamostragem: {subsample_factor}")
+    
+    # Plotando a assíntota
+    mean_length = data[-1]
+    plt.axhline(y=mean_length, color='green', linestyle='--', label=f"Comprimento médio: {mean_length:.3f}")
+    
+    plt.title(f"LZW - {graph_id})")
+    plt.xlabel("Índice (subamostrado)")
+    plt.ylabel("Comprimento médio (bits codificados / byte original)")
+    plt.xscale('log')
     plt.grid(True)
     plt.legend()
     
-    # Save the plot or show it
-    # plt.savefig(f"subsampled_plot.png")
-    plt.show()
+    # Exibindo
+    plt.savefig('plot_' + graph_id)
+    # plt.show()
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: python plot_floats.py <file_path> <subsample_factor>")
+    if len(sys.argv) != 4:
+        print("Uso: python plotter.py <arquivo de dados> <fator de subamostragem> <id do gráfico gerado>")
     else:
         file_path = sys.argv[1]
         subsample_factor = int(sys.argv[2])
-        plot_data(file_path, subsample_factor)
+        graph_id = sys.argv[3]
+        plot_data(file_path, subsample_factor, graph_id)

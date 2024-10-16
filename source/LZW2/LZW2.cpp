@@ -71,7 +71,7 @@ void LZW2::load_model(std::string& input_model_name) {
 
 void LZW2::save_model(std::string& output_model_name) {
 	std::cout << "Escrevendo dicionário em '" << output_model_name << "'..." << std::endl;
-	std::ofstream model_file(output_model_name, std::ios::binary);
+	std::ofstream model_file("model/" + output_model_name, std::ios::binary);
 
     if (!model_file.is_open()) {
         std::cerr << "Erro ao abrir arquivo do dicionário." << std::endl;
@@ -122,40 +122,18 @@ void LZW2::compress(std::string& input_filename, std::string& output_filename) {
 	char byte;
     while (input.get(byte)) {
 		uint8_t symbol = static_cast<uint8_t>(byte);
-		//std::cout << "Read original " << byte << std::endl;
 		std::vector<uint8_t> new_seq = current_seq;
 		new_seq.push_back(symbol); // Obtendo a sequência que contém o novo byte lido
 
 		if (compression_map.find(new_seq) != compression_map.end()) {
-			//std::cout << "Exists " << compression_map[new_seq] << "<>";
-			for (auto& c : new_seq) {
-				//std::cout << c << "-";
-			}
-			//std::cout << std::endl;
 			// Se a nova sequência ainda estiver no dicionário, só continuar lendo a partir dela
 			current_seq = new_seq;
 		} else {
-			//std::cout << "Doesn't exist ";
-			for (auto& c : new_seq) {
-				//std::cout << c << "-";
-			}
-			//std::cout << std::endl;
 			// Se a nova sequência não estiver
-			//std::cout << "Writing " << compression_map[current_seq] << "<>";
-			for (auto& c : current_seq) {
-				//std::cout << c << "-";
-			}
-			//std::cout << std::endl;
 			writer.write(compression_map[current_seq]); // Mandando para saída o código da última sequência que estava no dicionário
 
 			// Atualizando o dicionário (se possível)
-			if (compression_map.size()+1 < max_sequences) {
-				//std::cout << "Adding " << compression_map.size() << "<>";
-				for (auto& c : new_seq) {
-					//std::cout << c << "-";
-				}
-				//std::cout << std::endl << std::endl;
-				
+			if (compression_map.size()+1 < max_sequences) {				
 				// Se adicionar uma nova frase for necessitar de mais bits, incrementar a largura do código
 				if (compression_map.size()+1 > writer.get_max_code_value()) {
 					writer.increment_width();
@@ -170,17 +148,13 @@ void LZW2::compress(std::string& input_filename, std::string& output_filename) {
 			current_seq = {symbol}; // Reiniciando a sequência atual
 		}
 		if (is_benchmarking) {
-			benchmark_data_file << writer.get_bits_written() << std::endl;
+			if (writer.get_bits_written())
+				benchmark_data_file << writer.get_bits_written() << std::endl;
 		}
 	}
 
 	// Se o EOF for lido a última sequência lida ainda estava no dicionário, fazer flush dela na saída
 	if (current_seq.size()) {
-		//std::cout << "Writing (flush) " << compression_map[current_seq] << "<>";
-		for (auto& c : current_seq) {
-			//std::cout << c << "-";
-		}
-		//std::cout << std::endl;
 		writer.write(compression_map[current_seq]);
 	}
 
@@ -208,17 +182,6 @@ void LZW2::decompress(std::string& input_filename, std::string& output_filename)
 		reader.increment_width();
 	}
 
-	//std::cout << "Read back " << code << "<>";
-	for (auto& c : previous_seq) {
-		//std::cout << c << "-";
-	}
-	//std::cout << std::endl;
-
-	//std::cout << "Writing ";
-	for (auto& c : previous_seq) {
-		//std::cout << c << "-";
-	}
-	//std::cout << std::endl;
 	output.write(reinterpret_cast<const char*>(previous_seq.data()), previous_seq.size());
 
 	while (true) {
@@ -236,19 +199,8 @@ void LZW2::decompress(std::string& input_filename, std::string& output_filename)
 			current_seq = previous_seq;
 			current_seq.push_back(previous_seq[0]);
 		}
-
-		//std::cout << "Read back " << code << "<>";
-		for (auto& c : current_seq) {
-			//std::cout << c << "-";
-		}
-		//std::cout << std::endl;
 		
 		// Escrevendo na saída a sequência associada ao código lido
-		//std::cout << "Writing ";
-		for (auto& c : current_seq) {
-			//std::cout << c << "-";
-		}
-		//std::cout << std::endl;
 		output.write(reinterpret_cast<const char*>(current_seq.data()), current_seq.size());
 		
 		// Atualizando o dicionário (se possível)
@@ -256,11 +208,6 @@ void LZW2::decompress(std::string& input_filename, std::string& output_filename)
 			// A nova sequência é a anterior + o símbolo que quebrou a anterior (primeiro da atual)
 			std::vector<uint8_t> temp = previous_seq;
 			temp.push_back(current_seq[0]);
-			//std::cout << "Adding " << decompression_map.size() << "<>";
-			for (auto& c : temp) {
-				//std::cout << c << "-";
-			}
-			//std::cout << std::endl << std::endl;
 
 			// Se adicionar uma nova frase for necessitar de mais bits, incrementar a largura do código
 			if (decompression_map.size()+2 > reader.get_max_code_value()) {
