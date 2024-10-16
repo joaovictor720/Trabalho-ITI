@@ -7,6 +7,7 @@ is_saving_model=false
 is_restarting_map=false
 is_benchmarking=false
 subsample_factor=200
+plot_id=""
 model_name=""
 
 # Processando os argumentos
@@ -36,7 +37,8 @@ while [[ $# -gt 0 ]]; do
             ;;
         -b)
             is_benchmarking=true
-            shift 1
+            plot_id=$2
+            shift 2
             ;;
         --)
             shift # end of options
@@ -94,5 +96,5 @@ rm $compressed_filename
 # Plotando o gráfico do benchmark com assíntota exponencial
 if [ $is_benchmarking = true ]; then
     echo "Plotando gráfico de benchmark..."
-    python plotter.py benchmark_data_file $subsample_factor
+    python plotter.py benchmark_data_file $subsample_factor $plot_id
 fi

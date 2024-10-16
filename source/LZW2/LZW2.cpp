@@ -71,7 +71,7 @@ void LZW2::load_model(std::string& input_model_name) {
 
 void LZW2::save_model(std::string& output_model_name) {
 	std::cout << "Escrevendo dicionário em '" << output_model_name << "'..." << std::endl;
-	std::ofstream model_file("model/" + output_model_name, std::ios::binary);
+	std::ofstream model_file(output_model_name, std::ios::binary);
 
     if (!model_file.is_open()) {
         std::cerr << "Erro ao abrir arquivo do dicionário." << std::endl;
